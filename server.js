@@ -6,17 +6,19 @@ const port = process.env.PORT || 3000;
 
 app.use(express.urlencoded({ extended: true }));
 
-// Menggunakan path absolute agar sistem cloud tidak bingung
-const dataFile = path.join(__dirname, 'data_peminjaman.txt');
+// Path file yang pasti terbaca di Railway maupun Termux
+const dataFile = path.resolve(__dirname, 'data_peminjaman.txt');
 
-// Fungsi pembantu untuk memastikan file data selalu ada
-const inisialisasiFile = () => {
+// Fungsi inisialisasi file agar tidak error saat pertama kali dijalankan
+const inisialisasiData = () => {
     if (!fs.existsSync(dataFile)) {
-        const h = "PEMINJAM       | JUDUL BUKU           | NO. BUKU   | ID BUKU | PENERBIT   | TAHUN     | KURIKULUM\n----------------------------------------------------------------------------------------------------\n";
-        fs.writeFileSync(dataFile, h);
+        const header = "PEMINJAM       | JUDUL BUKU           | NO. BUKU   | ID BUKU | PENERBIT   | TAHUN     | KURIKULUM\n" +
+                       "----------------------------------------------------------------------------------------------------\n";
+        fs.writeFileSync(dataFile, header, 'utf8');
     }
 };
 
+// --- HALAMAN UTAMA ---
 app.get('/', (req, res) => {
     res.send(`
 <!DOCTYPE html>
@@ -56,32 +58,57 @@ app.get('/', (req, res) => {
 </html>`);
 });
 
+// --- FITUR CARI ---
 app.get('/cari', (req, res) => {
     const query = (req.query.q || '').toUpperCase();
-    inisialisasiFile();
-    const lines = fs.readFileSync(dataFile, 'utf8').split('\n');
+    inisialisasiData();
+    const content = fs.readFileSync(dataFile, 'utf8');
+    const lines = content.split('\n');
     const header = lines.slice(0, 2).join('\n');
-    const matches = lines.slice(2).filter(l => l.includes(query) && l.trim() !== "");
-    let hasil = matches.length > 0 ? header + "\n" + matches.join('\n') : "Data tidak ditemukan.";
-    res.send(`<body style="background:#1a1a2f; color:white; padding:20px;"><div style="max-width:400px; margin:auto;"><h2 style="color:#00c6ff;">🔍 CARI</h2><form action="/cari" method="GET"><input type="text" name="q" placeholder="Cari..." style="width:100%; padding:10px;"><button style="width:100%; background:#00c6ff; border:none; padding:10px; color:white; margin-top:5px;">CARI</button></form><pre style="background:#000; color:#00ff00; padding:10px; margin-top:20px; font-size:9px; overflow:auto;">${hasil}</pre><a href="/" style="display:block; text-align:center; color:#aaa; margin-top:20px;">⬅ KEMBALI</a></div></body>`);
+    const filtered = lines.slice(2).filter(line => line.includes(query) && line.trim() !== "");
+    
+    let hasil = filtered.length > 0 ? header + "\n" + filtered.join('\n') : "Data tidak ditemukan.";
+    
+    res.send(`
+    <body style="background:#1a1a2f; color:white; font-family:sans-serif; padding:20px;">
+        <div style="max-width:400px; margin:auto;">
+            <h2 style="color:#00c6ff;">🔍 HASIL CARI</h2>
+            <form action="/cari" method="GET">
+                <input type="text" name="q" placeholder="Cari..." style="width:100%; padding:10px; margin-bottom:10px;">
+                <button style="width:100%; padding:10px; background:#00c6ff; border:none; color:white;">CARI</button>
+            </form>
+            <pre style="background:#000; color:#00ff00; padding:10px; font-size:9px; overflow:auto; margin-top:20px;">${hasil}</pre>
+            <a href="/" style="display:block; text-align:center; margin-top:20px; color:#aaa;">⬅ KEMBALI</a>
+        </div>
+    </body>`);
 });
 
+// --- CEK DATA ---
 app.get('/cek-data', (req, res) => {
-    inisialisasiFile();
+    inisialisasiData();
     const log = fs.readFileSync(dataFile, 'utf8');
-    res.send(`<body style="background:#1a1a2f; color:#00ff00; padding:15px;"><pre style="font-size:9px;">${log}</pre><hr><a href="/" style="color:white; text-decoration:none; background:#444; padding:10px; border-radius:5px;">⬅ KEMBALI</a></body>`);
+    res.send(`<body style="background:#1a1a2f; color:#00ff00; padding:15px; font-family:monospace;"><pre style="font-size:9px;">${log}</pre><hr><a href="/" style="color:white; text-decoration:none; background:#444; padding:10px; border-radius:5px;">⬅ KEMBALI</a></body>`);
 });
 
+// --- TAMBAH DATA ---
 app.post('/tambah', (req, res) => {
-    inisialisasiFile();
+    inisialisasiData();
     const d = req.body;
-    const baris = (d.namaPeminjam || '').toUpperCase().padEnd(14) + " | " + (d.judulBuku || '').toUpperCase().padEnd(20) + " | " + (d.nomorBuku || '').padEnd(10) + " | " + (d.idBuku || '').padEnd(7) + " | " + (d.penerbit || '').toUpperCase().padEnd(10) + " | " + (d.tahunTerbit || '').padEnd(9) + " | " + (d.kurikulum || '').toUpperCase() + "\n";
+    const baris = (d.namaPeminjam || '').toUpperCase().padEnd(14) + " | " + 
+                  (d.judulBuku || '').toUpperCase().padEnd(20) + " | " + 
+                  (d.nomorBuku || '').padEnd(10) + " | " + 
+                  (d.idBuku || '').padEnd(7) + " | " + 
+                  (d.penerbit || '').toUpperCase().padEnd(10) + " | " + 
+                  (d.tahunTerbit || '').padEnd(9) + " | " + 
+                  (d.kurikulum || '').toUpperCase() + "\n";
     fs.appendFileSync(dataFile, baris);
     res.redirect('/cek-data');
 });
 
+// Jalankan Server
 app.listen(port, "0.0.0.0", () => {
-    console.log(`\x1b[36m┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓\x1b[0m`);
-    console.log(`\x1b[36m┃\x1b[0m  \x1b[32m✨ SERVER AZRIL PERPUS AKTIF ✨\x1b[0m                      \x1b[36m┃\x1b[0m`);
-    console.log(`\x1b[36m┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛\x1b[0m`);
+    console.log("================================");
+    console.log("SERVER AZRIL PERPUS ACTIVE");
+    console.log("PORT: " + port);
+    console.log("================================");
 });
