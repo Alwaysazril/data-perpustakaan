@@ -1,13 +1,13 @@
 const express = require('express');
 const fs = require('fs');
-const path = require('path'); // Tambahan modul path agar tidak error di website
+const path = require('path');
 const app = express();
 const port = process.env.PORT || 3000;
 
 app.use(express.urlencoded({ extended: true }));
 
-// Menentukan lokasi file agar sinkron antara Termux dan Railway
-const filePath = path.join(__dirname, 'data_peminjaman.txt');
+// Menentukan lokasi file agar tidak error di Railway
+const dataFile = path.join(__dirname, 'data_peminjaman.txt');
 
 // --- HALAMAN UTAMA ---
 app.get('/', (req, res) => {
@@ -54,67 +54,60 @@ app.get('/', (req, res) => {
 app.get('/cari', (req, res) => {
     const query = (req.query.q || '').toUpperCase();
     let hasil = "Data tidak ditemukan.";
-    
-    if (fs.existsSync(filePath)) {
-        const content = fs.readFileSync(filePath, 'utf8');
+    if (fs.existsSync(dataFile)) {
+        const content = fs.readFileSync(dataFile, 'utf8');
         const lines = content.split('\n');
-        const header = lines.slice(0, 2).join('\n'); 
-        const matches = lines.slice(2).filter(line => line.includes(query) && line.trim() !== "");
+        const header = lines.slice(0, 2).join('\n');
+        const matches = lines.slice(2).filter(l => l.includes(query) && l.trim() !== "");
         if (matches.length > 0) hasil = header + "\n" + matches.join('\n');
     }
-
-    res.send(`
-        <body style="background:#1a1a2f; color:white; padding:20px; font-family:sans-serif;">
-            <div style="max-width:400px; margin:auto;">
-                <h2 style="color:#00c6ff; text-align:center;">🔍 HASIL CARI</h2>
-                <form action="/cari" method="GET">
-                    <input type="text" name="q" placeholder="Cari Nama/Judul..." style="width:100%; padding:10px; margin-bottom:10px;">
-                    <button style="width:100%; padding:10px; background:#00c6ff; border:none; color:white;">CARI LAGI</button>
-                </form>
-                <pre style="background:#000; color:#00ff00; padding:10px; font-size:10px; overflow:auto;">${hasil}</pre>
-                <a href="/" style="display:block; text-align:center; margin-top:20px; color:#aaa; text-decoration:none;">⬅ KEMBALI</a>
-            </div>
-        </body>
-    `);
+    res.send(`<body style="background:#1a1a2f; color:white; padding:20px; font-family:sans-serif;"><div style="max-width:400px; margin:auto;"><h2 style="color:#00c6ff; text-align:center;">🔍 CARI DATA</h2><form action="/cari" method="GET"><input type="text" name="q" placeholder="Cari..." style="width:100%; padding:10px; margin-bottom:10px; box-sizing:border-box;"><button style="width:100%; background:#00c6ff; border:none; padding:10px; color:white;">CARI</button></form><pre style="background:#000; color:#00ff00; padding:10px; margin-top:20px; font-size:9px; overflow:auto;">${hasil}</pre><a href="/" style="display:block; text-align:center; color:#aaa; margin-top:20px;">⬅ KEMBALI</a></div></body>`);
 });
 
 // --- LIHAT DATA ---
 app.get('/cek-data', (req, res) => {
     let log = "Belum ada data.";
-    if (fs.existsSync(filePath)) log = fs.readFileSync(filePath, 'utf8');
+    if (fs.existsSync(dataFile)) log = fs.readFileSync(dataFile, 'utf8');
     res.send(`<body style="background:#1a1a2f; color:#00ff00; padding:15px; font-family:monospace;"><pre style="font-size:9px;">${log}</pre><hr><a href="/" style="color:white; text-decoration:none; background:#444; padding:10px; border-radius:5px;">⬅ KEMBALI</a></body>`);
 });
 
 // --- TAMBAH DATA ---
 app.post('/tambah', (req, res) => {
     const d = req.body;
-    if (!fs.existsSync(filePath)) {
+    if (!fs.existsSync(dataFile)) {
         const h = "PEMINJAM       | JUDUL BUKU           | NO. BUKU   | ID BUKU | PENERBIT   | TAHUN     | KURIKULUM\n----------------------------------------------------------------------------------------------------\n";
-        fs.writeFileSync(filePath, h);
+        fs.writeFileSync(dataFile, h);
     }
     const baris = (d.namaPeminjam || '').toUpperCase().padEnd(14) + " | " + (d.judulBuku || '').toUpperCase().padEnd(20) + " | " + (d.nomorBuku || '').padEnd(10) + " | " + (d.idBuku || '').padEnd(7) + " | " + (d.penerbit || '').toUpperCase().padEnd(10) + " | " + (d.tahunTerbit || '').padEnd(9) + " | " + (d.kurikulum || '').toUpperCase() + "\n";
-    fs.appendFileSync(filePath, baris);
+    fs.appendFileSync(dataFile, baris);
     res.redirect('/cek-data');
 });
 
-// --- TAMPILAN TERMINAL (TETAP SAMA SEPERTI GAMBAR) ---
-const rainbow = ["\x1b[38;2;255;0;0m", "\x1b[38;2;255;165;0m", "\x1b[38;2;255;255;0m", "\x1b[38;2;0;255;0m", "\x1b[38;2;0;255;255m", "\x1b[38;2;0;191;255m", "\x1b[38;2;255;0;255m"];
-let idx = 0;
+// --- ANIMASI TERMINAL (DIPERTAHANKAN UNTUK TERMUX) ---
+const rainbowColors = ["\x1b[38;2;255;0;0m", "\x1b[38;2;255;165;0m", "\x1b[38;2;255;255;0m", "\x1b[38;2;0;255;0m", "\x1b[38;2;0;255;255m", "\x1b[38;2;0;191;255m", "\x1b[38;2;255;0;255m"];
+let colorIdx = 0;
 
-function runTerminal() {
-    if (process.env.RAILWAY_STATIC_URL) return; // Supaya tidak error di Railway
-    const cyan = "\x1b[38;2;0;255;255m", reset = "\x1b[0m", glow = rainbow[idx];
+function updateTerminal() {
+    // Jika berjalan di Railway, stop animasi agar tidak error
+    if (process.env.RAILWAY_STATIC_URL || process.env.RAILWAY_PROJECT_ID) return;
+
+    const cyan = "\x1b[38;2;0;255;255m", white = "\x1b[1m\x1b[38;2;255;255;255m", reset = "\x1b[0m", glow = rainbowColors[colorIdx];
     process.stdout.write('\x1Bc');
     console.log(`${cyan}┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓${reset}`);
     console.log(`${cyan}┃${reset}  ${glow}✨ SERVER IS RUNNING ALWAYS AZRIL ✨${reset}               ${cyan}┃${reset}`);
     console.log(`${cyan}┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫${reset}`);
-    console.log(`${cyan}┃${reset}  🚀 Status  : ${glow}Online & Active${reset}                   ${cyan}┃${reset}`);
-    console.log(`${cyan}┃${reset}  🌍 Link    : ${cyan}http://localhost:${port}${reset}          ${cyan}┃${reset}`);
+    console.log(`${cyan}┃${reset}  ${white}🚀 Status  :${reset} ${glow}Online & Active${reset}                   ${cyan}┃${reset}`);
+    console.log(`${cyan}┃${reset}  ${white}🌍 Link    :${reset} ${cyan}http://localhost:${port}${reset}          ${cyan}┃${reset}`);
+    console.log(`${cyan}┃${reset}  ${white}📱 Browser :${reset} ${white}Chrome / Samsung Internet${reset}        ${cyan}┃${reset}`);
     console.log(`${cyan}┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛${reset}`);
-    idx = (idx + 1) % rainbow.length;
+    colorIdx = (colorIdx + 1) % rainbowColors.length;
 }
 
 app.listen(port, "0.0.0.0", () => {
-    if (!process.env.RAILWAY_STATIC_URL) setInterval(runTerminal, 500);
-    else console.log("Server Aktif di Railway!"); // Log sederhana untuk Railway
+    // Jalankan animasi HANYA jika bukan di Railway (berarti di Termux)
+    if (!process.env.RAILWAY_STATIC_URL && !process.env.RAILWAY_PROJECT_ID) {
+        setInterval(updateTerminal, 500);
+    } else {
+        console.log("Server Aktif di Railway!");
+    }
 });
