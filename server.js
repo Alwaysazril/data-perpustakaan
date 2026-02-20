@@ -17,24 +17,20 @@ const inisialisasiData = () => {
     }
 };
 
-// HALAMAN UTAMA
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// HALAMAN KHUSUS CARI (Tampilan input putih + tombol biru)
 app.get('/halaman-cari', (req, res) => {
     res.sendFile(path.join(__dirname, 'cari.html'));
 });
 
-// FITUR AMBIL DATA
 app.get('/data', (req, res) => {
     inisialisasiData();
     const content = fs.readFileSync(dataFile, 'utf8');
     res.send(content);
 });
 
-// FITUR SIMPAN
 app.post('/pinjam', (req, res) => {
     inisialisasiData();
     const d = req.body;
@@ -51,7 +47,6 @@ app.post('/pinjam', (req, res) => {
     res.redirect('/');
 });
 
-// FITUR PROSES CARI
 app.get('/cari', (req, res) => {
     const query = (req.query.q || '').toUpperCase();
     inisialisasiData();
@@ -67,7 +62,7 @@ app.get('/cari', (req, res) => {
                 <h2 style="color:#00d4ff;">🔍 CARI DATA</h2>
                 <form action="/cari" method="GET">
                     <input type="text" name="q" value="${query}" style="width:100%; padding:12px; border-radius:8px; border:none; margin-bottom:10px;">
-                    <button type="submit" style="width:100%; padding:12px; background:#00d4ff; color:white; border:none; border-radius:8px; font-weight:bold;">CARI SEKARANG</button>
+                    <button type="submit" style="width:100%; padding:12px; background:#00d4ff; color:white; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">CARI SEKARANG</button>
                 </form>
                 <div style="margin-top:20px; background:#000; padding:10px; border-radius:10px; text-align:left; overflow-x:auto; border:1px solid #333;">
                     <pre style="color:#00ff00; font-family:monospace; font-size:10px; margin:0;">${hasil}</pre>
@@ -78,4 +73,4 @@ app.get('/cari', (req, res) => {
     `);
 });
 
-app.listen(port, "0.0.0.0", () => console.log(`Server nyala di port ${port}`));
+app.listen(port, "0.0.0.0", () => console.log("Server Aktif!"));
