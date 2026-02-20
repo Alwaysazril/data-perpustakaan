@@ -12,6 +12,7 @@ const dataFile = path.resolve(__dirname, 'data_peminjaman.txt');
 // Fungsi inisialisasi file agar tidak error saat pertama kali dijalankan
 const inisialisasiData = () => {
     if (!fs.existsSync(dataFile)) {
+        // Header disesuaikan panjangnya dengan padEnd di bawah
         const header = "PEMINJAM       | JUDUL BUKU           | NO. BUKU   | ID BUKU | PENERBIT   | TAHUN     | KURIKULUM\n" +
                        "----------------------------------------------------------------------------------------------------\n";
         fs.writeFileSync(dataFile, header, 'utf8');
@@ -77,7 +78,7 @@ app.get('/cari', (req, res) => {
                 <input type="text" name="q" placeholder="Cari..." style="width:100%; padding:10px; margin-bottom:10px;">
                 <button style="width:100%; padding:10px; background:#00c6ff; border:none; color:white;">CARI</button>
             </form>
-            <pre style="background:#000; color:#00ff00; padding:10px; font-size:9px; overflow:auto; margin-top:20px;">${hasil}</pre>
+            <pre style="background:#000; color:#00ff00; padding:10px; font-size:9px; overflow:auto; margin-top:20px; font-family:monospace;">${hasil}</pre>
             <a href="/" style="display:block; text-align:center; margin-top:20px; color:#aaa;">⬅ KEMBALI</a>
         </div>
     </body>`);
@@ -87,13 +88,20 @@ app.get('/cari', (req, res) => {
 app.get('/cek-data', (req, res) => {
     inisialisasiData();
     const log = fs.readFileSync(dataFile, 'utf8');
-    res.send(`<body style="background:#1a1a2f; color:#00ff00; padding:15px; font-family:monospace;"><pre style="font-size:9px;">${log}</pre><hr><a href="/" style="color:white; text-decoration:none; background:#444; padding:10px; border-radius:5px;">⬅ KEMBALI</a></body>`);
+    res.send(`
+    <body style="background:#1a1a2f; color:#00ff00; padding:15px;">
+        <pre style="font-size:9px; font-family:monospace; white-space:pre;">${log}</pre>
+        <hr>
+        <a href="/" style="color:white; text-decoration:none; background:#444; padding:10px; border-radius:5px;">⬅ KEMBALI</a>
+    </body>`);
 });
 
-// --- TAMBAH DATA ---
+// --- TAMBAH DATA (BAGIAN PERBAIKAN) ---
 app.post('/tambah', (req, res) => {
     inisialisasiData();
     const d = req.body;
+    
+    // Nilai padEnd disesuaikan agar teks sejajar dengan header
     const baris = (d.namaPeminjam || '').toUpperCase().padEnd(14) + " | " + 
                   (d.judulBuku || '').toUpperCase().padEnd(20) + " | " + 
                   (d.nomorBuku || '').padEnd(10) + " | " + 
@@ -101,7 +109,8 @@ app.post('/tambah', (req, res) => {
                   (d.penerbit || '').toUpperCase().padEnd(10) + " | " + 
                   (d.tahunTerbit || '').padEnd(9) + " | " + 
                   (d.kurikulum || '').toUpperCase() + "\n";
-    fs.appendFileSync(dataFile, baris);
+                  
+    fs.appendFileSync(dataFile, baris, 'utf8');
     res.redirect('/cek-data');
 });
 
