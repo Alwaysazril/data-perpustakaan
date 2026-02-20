@@ -1,5 +1,5 @@
 const express = require('express');
-const fs = require('fs'); // Perbaikan: tadinya 'fa' sekarang sudah 'fs'
+const fs = require('fs'); // SUDAH DIPERBAIKI: Dari 'fa' ke 'fs'
 const path = require('path');
 const app = express();
 const port = process.env.PORT || 3000;
@@ -9,7 +9,7 @@ app.use(express.static(__dirname));
 
 const dataFile = path.resolve(__dirname, 'data_peminjaman.txt');
 
-// Fungsi inisialisasi agar database punya header yang rapi
+// Inisialisasi Database agar kolom rapi
 const inisialisasiData = () => {
     if (!fs.existsSync(dataFile)) {
         const header = "PEMINJAM       | JUDUL BUKU           | NO. BUKU   | ID BUKU | PENERBIT   | TAHUN     | KURIKULUM\n" +
@@ -23,19 +23,18 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// --- AMBIL DATA (Untuk tabel di bawah form) ---
+// --- AMBIL DATA (Untuk tabel di index.html) ---
 app.get('/data', (req, res) => {
     inisialisasiData();
     const content = fs.readFileSync(dataFile, 'utf8');
     res.send(content);
 });
 
-// --- SIMPAN DATA (Sesuai dengan name="" di index.html) ---
+// --- SIMPAN DATA (Sinkron dengan index.html) ---
 app.post('/pinjam', (req, res) => {
     inisialisasiData();
     const d = req.body;
     
-    // Padding agar kolom tetap lurus sejajar
     const nama = (d.nama || '').toUpperCase().substring(0, 14).padEnd(14);
     const buku = (d.buku || '').toUpperCase().substring(0, 20).padEnd(20);
     const no   = (d.no_buku || '').substring(0, 10).padEnd(10);
@@ -74,5 +73,5 @@ app.get('/cek-data', (req, res) => {
 });
 
 app.listen(port, "0.0.0.0", () => {
-    console.log("Server Online di Port " + port);
+    console.log("Server Perpus Online Aktif!");
 });
