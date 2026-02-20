@@ -1,9 +1,21 @@
 const express = require('express');
 const fs = require('fs');
+const path = require('path');
 const app = express();
 const port = process.env.PORT || 3000;
 
 app.use(express.urlencoded({ extended: true }));
+
+// Tentukan lokasi file data yang aman untuk Railway & Termux
+const dataFile = path.join(__dirname, 'data_peminjaman.txt');
+
+// Fungsi untuk memastikan file data ada
+const cekFile = () => {
+    if (!fs.existsSync(dataFile)) {
+        const header = "PEMINJAM       | JUDUL BUKU           | NO. BUKU   | ID BUKU | PENERBIT   | TAHUN     | KURIKULUM\n----------------------------------------------------------------------------------------------------\n";
+        fs.writeFileSync(dataFile, header);
+    }
+};
 
 // --- HALAMAN UTAMA ---
 app.get('/', (req, res) => {
@@ -49,71 +61,55 @@ app.get('/', (req, res) => {
 // --- HALAMAN PENCARIAN ---
 app.get('/cari', (req, res) => {
     const query = (req.query.q || '').toUpperCase();
-    let hasil = "";
-    if (fs.existsSync('data_peminjaman.txt')) {
-        const lines = fs.readFileSync('data_peminjaman.txt', 'utf8').split('\n');
-        const header = lines.slice(0, 2).join('\n'); 
-        const dataLines = lines.slice(2).filter(line => line.includes(query) && line.trim() !== "");
-        hasil = dataLines.length > 0 ? header + "\n" + dataLines.join('\n') : "Data tidak ditemukan.";
-    }
-    res.send(`
-        <body style="background:#1a1a2f; color:white; font-family:sans-serif; padding:20px;">
-            <div style="max-width:400px; margin:auto;">
-                <h2 style="color:#00c6ff; text-align:center;">🔍 CARI DATA</h2>
-                <form action="/cari" method="GET">
-                    <input type="text" name="q" placeholder="Ketik Nama/Judul..." value="${req.query.q || ''}" style="width:100%; padding:12px; border-radius:8px; border:none; margin-bottom:10px; box-sizing:border-box;">
-                    <button type="submit" style="width:100%; padding:10px; background:#00c6ff; border:none; border-radius:8px; color:white; font-weight:bold;">CARI SEKARANG</button>
-                </form>
-                <div style="background:#000; color:#00ff00; padding:15px; border-radius:10px; margin-top:20px; font-family:monospace; overflow-x:auto;">
-                    <pre style="font-size:9px; letter-spacing:1px;">${hasil}</pre>
-                </div>
-                <a href="/" style="display:block; text-align:center; margin-top:20px; color:#aaa; text-decoration:none;">⬅ KEMBALI</a>
-            </div>
-        </body>
-    `);
+    let hasil = "Belum ada data.";
+    cekFile();
+    const content = fs.readFileSync(dataFile, 'utf8');
+    const lines = content.split('\n');
+    const header = lines.slice(0, 2).join('\n');
+    const matches = lines.slice(2).filter(l => l.includes(query) && l.trim() !== "");
+    hasil = matches.length > 0 ? header + "\n" + matches.join('\n') : "Data tidak ditemukan.";
+
+    res.send(`<body style="background:#1a1a2f; color:white; padding:20px; font-family:sans-serif;"><div style="max-width:400px; margin:auto;"><h2 style="color:#00c6ff;">🔍 CARI</h2><form action="/cari" method="GET"><input type="text" name="q" placeholder="Cari..." style="width:100%; padding:10px; margin-bottom:10px;"><button style="width:100%; background:#00c6ff; border:none; padding:10px; color:white;">CARI</button></form><pre style="background:#000; color:#00ff00; padding:10px; margin-top:20px; font-size:10px; overflow:auto;">${hasil}</pre><a href="/" style="display:block; text-align:center; color:#aaa; margin-top:20px;">⬅ KEMBALI</a></div></body>`);
 });
 
 // --- LIHAT DATA ---
 app.get('/cek-data', (req, res) => {
-    let log = "Belum ada data.";
-    if (fs.existsSync('data_peminjaman.txt')) { log = fs.readFileSync('data_peminjaman.txt', 'utf8'); }
-    res.send(`<body style="background:#1a1a2f; color:#00ff00; padding:15px; font-family:monospace;"><pre style="font-size:9px; letter-spacing:1px;">${log}</pre><hr><a href="/" style="color:white; text-decoration:none; background:#444; padding:10px; border-radius:5px;">⬅ KEMBALI</a></body>`);
+    cekFile();
+    const log = fs.readFileSync(dataFile, 'utf8');
+    res.send(`<body style="background:#1a1a2f; color:#00ff00; padding:15px; font-family:monospace;"><pre style="font-size:9px;">${log}</pre><hr><a href="/" style="color:white; text-decoration:none; background:#444; padding:10px; border-radius:5px;">⬅ KEMBALI</a></body>`);
 });
 
 // --- TAMBAH DATA ---
 app.post('/tambah', (req, res) => {
+    cekFile();
     const d = req.body;
-    if (!fs.existsSync('data_peminjaman.txt')) {
-        const h = "PEMINJAM       | JUDUL BUKU           | NO. BUKU   | ID BUKU | PENERBIT   | TAHUN     | KURIKULUM\n----------------------------------------------------------------------------------------------------\n";
-        fs.writeFileSync('data_peminjaman.txt', h);
-    }
     const baris = (d.namaPeminjam || '').toUpperCase().padEnd(14) + " | " + (d.judulBuku || '').toUpperCase().padEnd(20) + " | " + (d.nomorBuku || '').padEnd(10) + " | " + (d.idBuku || '').padEnd(7) + " | " + (d.penerbit || '').toUpperCase().padEnd(10) + " | " + (d.tahunTerbit || '').padEnd(9) + " | " + (d.kurikulum || '').toUpperCase() + "\n";
-    fs.appendFileSync('data_peminjaman.txt', baris);
+    fs.appendFileSync(dataFile, baris);
     res.redirect('/cek-data');
 });
 
-// --- ANIMASI TERMINAL (DETEKSI RAILWAY) ---
-const isRailway = process.env.RAILWAY_STATIC_URL || process.env.PORT; // Deteksi lingkungan cloud
+// --- ANIMASI TERMINAL (KHUSUS TERMUX) ---
 const rainbowColors = ["\x1b[38;2;255;0;0m", "\x1b[38;2;255;165;0m", "\x1b[38;2;255;255;0m", "\x1b[38;2;0;255;0m", "\x1b[38;2;0;255;255m", "\x1b[38;2;0;191;255m", "\x1b[38;2;255;0;255m"];
 let colorIdx = 0;
 
 function updateTerminal() {
-    if (process.env.NODE_ENV === 'production') return; // Jangan jalankan animasi di hosting
-    const cyanFrame = "\x1b[38;2;0;255;255m", whiteBold = "\x1b[1m\x1b[38;2;255;255;255m", reset = "\x1b[0m", bold = "\x1b[1m", glow = rainbowColors[colorIdx];
-    process.stdout.write('\x1Bc'); 
-    console.log(`${cyanFrame}${bold}┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓${reset}`);
-    console.log(`${cyanFrame}${bold}┃${reset}  ${glow}${bold}✨ SERVER IS RUNNING ALWAYS AZRIL ✨${reset}               ${cyanFrame}${bold}┃${reset}`);
-    console.log(`${cyanFrame}${bold}┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫${reset}`);
-    console.log(`${cyanFrame}${bold}┃${reset}  ${whiteBold}🚀 Status  :${reset} ${glow}Online & Active${reset}                   ${cyanFrame}${bold}┃${reset}`);
-    console.log(`${cyanFrame}${bold}┃${reset}  ${whiteBold}🌍 Link    :${reset} ${cyanFrame}http://localhost:${port}${reset}          ${cyanFrame}${bold}┃${reset}`);
-    console.log(`${cyanFrame}${bold}┃${reset}  ${whiteBold}📱 Browser :${reset} ${whiteBold}Chrome / Samsung Internet${reset}        ${cyanFrame}${bold}┃${reset}`);
-    console.log(`${cyanFrame}${bold}┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛${reset}`);
+    // Matikan animasi jika di Railway (menghindari error log)
+    if (process.env.RAILWAY_PROJECT_ID) return; 
+
+    const cyan = "\x1b[38;2;0;255;255m", white = "\x1b[1m\x1b[38;2;255;255;255m", reset = "\x1b[0m", glow = rainbowColors[colorIdx];
+    process.stdout.write('\x1Bc');
+    console.log(`${cyan}┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓${reset}`);
+    console.log(`${cyan}┃${reset}  ${glow}✨ SERVER IS RUNNING ALWAYS AZRIL ✨${reset}               ${cyan}┃${reset}`);
+    console.log(`${cyan}┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫${reset}`);
+    console.log(`${cyan}┃${reset}  ${white}🚀 Status  :${reset} ${glow}Online & Active${reset}                   ${cyan}┃${reset}`);
+    console.log(`${cyan}┃${reset}  ${white}🌍 Link    :${reset} ${cyan}http://localhost:${port}${reset}          ${cyan}┃${reset}`);
+    console.log(`${cyan}┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛${reset}`);
     colorIdx = (colorIdx + 1) % rainbowColors.length;
 }
 
 app.listen(port, "0.0.0.0", () => {
-    console.log("Server running on port " + port);
-    if (!process.env.RAILWAY_PROJECT_ID) { // Hanya jalankan animasi jika BUKAN di Railway
+    console.log("Server Aktif di Port " + port);
+    if (!process.env.RAILWAY_PROJECT_ID) {
         setInterval(updateTerminal, 500);
     }
 });
