@@ -5,7 +5,7 @@ const port = process.env.PORT || 3000;
 
 app.use(express.urlencoded({ extended: true }));
 
-// Halaman Utama
+// --- HALAMAN UTAMA ---
 app.get('/', (req, res) => {
     res.send(`
 <!DOCTYPE html>
@@ -19,7 +19,8 @@ app.get('/', (req, res) => {
         h2 { text-align: center; color: #00c6ff; }
         input { width: 100%; padding: 12px; margin: 6px 0; border-radius: 8px; border: none; box-sizing: border-box; }
         button { width: 100%; padding: 15px; background: #2ecc71; color: white; border: none; border-radius: 10px; font-weight: bold; margin-top: 15px; cursor: pointer; }
-        .btn-cek { display: block; text-align: center; margin-top: 20px; color: #aaa; text-decoration: none; font-size: 12px; }
+        .menu-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 20px; }
+        .btn-nav { text-align: center; color: #fff; text-decoration: none; font-size: 12px; background: #444; padding: 10px; border-radius: 8px; }
     </style>
 </head>
 <body>
@@ -35,39 +36,59 @@ app.get('/', (req, res) => {
             <input type="text" name="kurikulum" placeholder="Kurikulum">
             <button type="submit">SIMPAN DATA</button>
         </form>
-        <a href="/cek-data" class="btn-cek">LIHAT DATA</a>
+        <div class="menu-grid">
+            <a href="/cek-data" class="btn-nav">📋 LIHAT DATA</a>
+            <a href="/cari" class="btn-nav">🔍 CARI DATA</a>
+        </div>
     </div>
 </body>
 </html>
     `);
 });
 
-// Halaman Lihat Data
-app.get('/cek-data', (req, res) => {
-    let log = "Belum ada data.";
+// --- HALAMAN PENCARIAN ---
+app.get('/cari', (req, res) => {
+    const query = (req.query.q || '').toUpperCase();
+    let hasil = "";
+    
     if (fs.existsSync('data_peminjaman.txt')) {
-        log = fs.readFileSync('data_peminjaman.txt', 'utf8');
+        const lines = fs.readFileSync('data_peminjaman.txt', 'utf8').split('\n');
+        const header = lines.slice(0, 2).join('\n'); 
+        const dataLines = lines.slice(2).filter(line => line.includes(query) && line.trim() !== "");
+        
+        if (dataLines.length > 0) {
+            hasil = header + "\n" + dataLines.join('\n');
+        } else {
+            hasil = "Data tidak ditemukan.";
+        }
     }
+
     res.send(`
-        <body style="background:#1a1a2f; color:#00ff00; padding:15px; font-family:monospace;">
-            <pre style="white-space:pre; font-size:9px; letter-spacing: 1px;">${log}</pre>
-            <hr style="border:0.5px solid #333; margin:20px 0;">
-            <div style="display:flex; gap:10px;">
-                <a href="/" style="color:white; text-decoration:none; background:#444; padding:10px; border-radius:5px; font-family:sans-serif;">⬅ KEMBALI</a>
-                <form action="/hapus-semua" method="POST" onsubmit="return confirm('Hapus semua?')">
-                    <button type="submit" style="background:#e74c3c; color:white; border:none; padding:10px; border-radius:5px; cursor:pointer;">🗑️ HAPUS SEMUA</button>
+        <body style="background:#1a1a2f; color:white; font-family:sans-serif; padding:20px;">
+            <div style="max-width:400px; margin:auto;">
+                <h2 style="color:#00c6ff; text-align:center;">🔍 CARI DATA</h2>
+                <form action="/cari" method="GET">
+                    <input type="text" name="q" placeholder="Ketik Nama/Judul..." value="${req.query.q || ''}" 
+                           style="width:100%; padding:12px; border-radius:8px; border:none; margin-bottom:10px; box-sizing:border-box;">
+                    <button type="submit" style="width:100%; padding:10px; background:#00c6ff; border:none; border-radius:8px; color:white; font-weight:bold;">CARI SEKARANG</button>
                 </form>
+                <div style="background:#000; color:#00ff00; padding:15px; border-radius:10px; margin-top:20px; font-family:monospace; overflow-x:auto;">
+                    <pre style="font-size:9px; letter-spacing:1px;">${hasil}</pre>
+                </div>
+                <a href="/" style="display:block; text-align:center; margin-top:20px; color:#aaa; text-decoration:none;">⬅ KEMBALI</a>
             </div>
         </body>
     `);
 });
 
-app.post('/hapus-semua', (req, res) => {
-    if (fs.existsSync('data_peminjaman.txt')) { fs.unlinkSync('data_peminjaman.txt'); }
-    res.redirect('/cek-data');
+// --- LIHAT DATA ---
+app.get('/cek-data', (req, res) => {
+    let log = "Belum ada data.";
+    if (fs.existsSync('data_peminjaman.txt')) { log = fs.readFileSync('data_peminjaman.txt', 'utf8'); }
+    res.send(`<body style="background:#1a1a2f; color:#00ff00; padding:15px; font-family:monospace;"><pre style="font-size:9px; letter-spacing:1px;">${log}</pre><hr><a href="/" style="color:white; text-decoration:none; background:#444; padding:10px; border-radius:5px;">⬅ KEMBALI</a></body>`);
 });
 
-// Penyesuaian Spasi Kolom
+// --- TAMBAH DATA ---
 app.post('/tambah', (req, res) => {
     const d = req.body;
     if (!fs.existsSync('data_peminjaman.txt')) {
@@ -75,8 +96,6 @@ app.post('/tambah', (req, res) => {
                   "----------------------------------------------------------------------------------------------------\n";
         fs.writeFileSync('data_peminjaman.txt', h);
     }
-    
-    // Angka padEnd disesuaikan persis dengan jumlah karakter judul
     const baris = (d.namaPeminjam || '').toUpperCase().padEnd(14) + " | " + 
                   (d.judulBuku || '').toUpperCase().padEnd(20) + " | " + 
                   (d.nomorBuku || '').padEnd(10) + " | " + 
@@ -84,9 +103,34 @@ app.post('/tambah', (req, res) => {
                   (d.penerbit || '').toUpperCase().padEnd(10) + " | " + 
                   (d.tahunTerbit || '').padEnd(9) + " | " + 
                   (d.kurikulum || '').toUpperCase() + "\n";
-    
     fs.appendFileSync('data_peminjaman.txt', baris);
     res.redirect('/cek-data');
 });
 
-app.listen(port, "0.0.0.0", () => { console.log("Server Aktif"); });
+// --- ANIMASI TERMINAL (TAMPILAN TETAP SAMA) ---
+const rainbowColors = ["\x1b[38;2;255;0;0m", "\x1b[38;2;255;165;0m", "\x1b[38;2;255;255;0m", "\x1b[38;2;0;255;0m", "\x1b[38;2;0;255;255m", "\x1b[38;2;0;191;255m", "\x1b[38;2;255;0;255m"];
+let colorIdx = 0;
+
+function updateTerminal() {
+    const cyanFrame = "\x1b[38;2;0;255;255m";
+    const whiteBold = "\x1b[1m\x1b[38;2;255;255;255m";
+    const reset = "\x1b[0m";
+    const bold = "\x1b[1m";
+    const glow = rainbowColors[colorIdx];
+
+    process.stdout.write('\x1Bc'); 
+    console.log(`${cyanFrame}${bold}┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓${reset}`);
+    console.log(`${cyanFrame}${bold}┃${reset}  ${glow}${bold}✨ SERVER IS RUNNING ALWAYS AZRIL ✨${reset}               ${cyanFrame}${bold}┃${reset}`);
+    console.log(`${cyanFrame}${bold}┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫${reset}`);
+    console.log(`${cyanFrame}${bold}┃${reset}  ${whiteBold}🚀 Status  :${reset} ${glow}Online & Active${reset}                   ${cyanFrame}${bold}┃${reset}`);
+    console.log(`${cyanFrame}${bold}┃${reset}  ${whiteBold}🌍 Link    :${reset} ${cyanFrame}http://localhost:${port}${reset}          ${cyanFrame}${bold}┃${reset}`);
+    console.log(`${cyanFrame}${bold}┃${reset}  ${whiteBold}📱 Browser :${reset} ${whiteBold}Chrome / Samsung Internet${reset}        ${cyanFrame}${bold}┃${reset}`);
+    console.log(`${cyanFrame}${bold}┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛${reset}`);
+    console.log(`\n${glow}${bold}>> Animasi Aktif... Silakan buka browser Anda! 🚀${reset}\n`);
+
+    colorIdx = (colorIdx + 1) % rainbowColors.length;
+}
+
+app.listen(port, "0.0.0.0", () => {
+    setInterval(updateTerminal, 500);
+});
