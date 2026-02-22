@@ -1,0 +1,149 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-family: 'Poppins', sans-serif;
+    overflow: hidden;
+}
+
+/* Pengaturan Video Background */
+#bgVideo {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    z-index: -2;
+    filter: brightness(30%) contrast(110%);
+}
+
+.overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 20, 20, 0.4);
+    z-index: -1;
+}
+
+/* Kotak Login Premium */
+.login-container {
+    width: 360px;
+    background: rgba(0, 30, 30, 0.8);
+    backdrop-filter: blur(15px);
+    border: 2px solid #00ffff;
+    border-radius: 20px;
+    padding: 30px;
+    box-shadow: 0 0 25px rgba(0, 255, 255, 0.3), inset 0 0 15px rgba(0, 255, 255, 0.1);
+    text-align: center;
+    animation: fadeIn 1s ease-out;
+}
+
+/* Kotak Video Karakter (Video Kedua) */
+.video-character-box {
+    width: 100%;
+    height: 160px;
+    border: 2px solid #00ffff;
+    border-radius: 12px;
+    overflow: hidden;
+    margin-bottom: 25px;
+    box-shadow: 0 0 15px #00ffff;
+}
+
+.inner-video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* Header Teks */
+.login-header h2 {
+    font-family: 'Orbitron', sans-serif;
+    color: #00ffff;
+    letter-spacing: 4px;
+    text-shadow: 0 0 10px #00ffff;
+    margin-bottom: 5px;
+}
+
+.login-header p {
+    font-size: 10px;
+    color: rgba(255, 255, 255, 0.6);
+    margin-bottom: 30px;
+    letter-spacing: 2px;
+}
+
+/* Input Styling */
+.input-group {
+    margin-bottom: 20px;
+}
+
+.input-group input {
+    width: 100%;
+    padding: 12px;
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid #008b8b;
+    border-radius: 8px;
+    color: #fff;
+    outline: none;
+    text-align: center;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 13px;
+    transition: 0.3s;
+}
+
+.input-group input:focus {
+    border-color: #00ffff;
+    box-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+}
+
+/* Tombol Login */
+.btn-login {
+    width: 100%;
+    padding: 15px;
+    background: transparent;
+    border: 2px solid #00ffff;
+    color: #00ffff;
+    font-family: 'Orbitron', sans-serif;
+    font-weight: bold;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: 0.5s;
+}
+
+.btn-login:hover {
+    background: #00ffff;
+    color: #001a1a;
+    box-shadow: 0 0 30px #00ffff;
+    transform: translateY(-2px);
+}
+
+.footer-links {
+    margin-top: 25px;
+}
+
+.footer-links a {
+    color: #fff;
+    text-decoration: none;
+    font-size: 11px;
+    opacity: 0.7;
+}
+
+.cyan-text {
+    color: #00ffff;
+    font-weight: bold;
+}
+
+/* Animasi Masuk */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(30px); }
+    to { opacity: 1; transform: translateY(0); }
+}
